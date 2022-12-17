@@ -70,6 +70,10 @@ public class CorrelationTuple implements Comparable<CorrelationTuple> {
         return _sumXY;
     }
 
+    public double getSquareSumX() { return _squareSumX; }
+
+    public double getSquareSumY() { return _squareSumY; }
+
     public long getCount() {
         return _count;
     }
