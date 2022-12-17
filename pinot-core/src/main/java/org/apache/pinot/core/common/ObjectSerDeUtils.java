@@ -125,7 +125,8 @@ public class ObjectSerDeUtils {
     DoubleLongPair(30),
     StringLongPair(31),
     CovarianceTuple(32),
-    VarianceTuple(33);
+    VarianceTuple(33),
+    CorrelationTuple(34);
 
     private final int _value;
 
