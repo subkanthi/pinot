@@ -28,14 +28,13 @@ import org.apache.pinot.core.query.aggregation.groupby.GroupByResultHolder;
 import org.apache.pinot.core.query.aggregation.groupby.ObjectGroupByResultHolder;
 import org.apache.pinot.core.query.aggregation.utils.StatisticalAggregationFunctionUtils;
 import org.apache.pinot.segment.local.customobject.CorrelationTuple;
-import org.apache.pinot.segment.local.customobject.CovarianceTuple;
 import org.apache.pinot.segment.spi.AggregationFunctionType;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-public class CorrelationAggregationFunction  implements AggregationFunction<CorrelationTuple, Double>  {
+public class CorrelationAggregationFunction implements AggregationFunction<CorrelationTuple, Double> {
     private static final double DEFAULT_FINAL_RESULT = Double.NEGATIVE_INFINITY;
     protected final ExpressionContext _expression1;
     protected final ExpressionContext _expression2;
@@ -117,7 +116,8 @@ public class CorrelationAggregationFunction  implements AggregationFunction<Corr
                                     double sumXY, double squareSumX, double squareSumY, long count) {
         CorrelationTuple correlationTuple = groupByResultHolder.getResult(groupKey);
         if (correlationTuple == null) {
-            groupByResultHolder.setValueForKey(groupKey, new CorrelationTuple(sumX, sumY, sumXY, squareSumX, squareSumY, count));
+            groupByResultHolder.setValueForKey(groupKey, new CorrelationTuple(sumX, sumY, sumXY,
+                    squareSumX, squareSumY, count));
         } else {
             correlationTuple.apply(sumX, sumY, sumXY, squareSumX, squareSumY, count);
         }
@@ -151,7 +151,7 @@ public class CorrelationAggregationFunction  implements AggregationFunction<Corr
     public CorrelationTuple extractAggregationResult(AggregationResultHolder aggregationResultHolder) {
         CorrelationTuple correlationTuple = aggregationResultHolder.getResult();
         if (correlationTuple == null) {
-            return new CorrelationTuple(0.0, 0.0, 0.0, 0.0, 0.0,0L);
+            return new CorrelationTuple(0.0, 0.0, 0.0, 0.0, 0.0, 0L);
         } else {
             return correlationTuple;
         }

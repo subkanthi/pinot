@@ -70,9 +70,13 @@ public class CorrelationTuple implements Comparable<CorrelationTuple> {
         return _sumXY;
     }
 
-    public double getSquareSumX() { return _squareSumX; }
+    public double getSquareSumX() {
+        return _squareSumX;
+    }
 
-    public double getSquareSumY() { return _squareSumY; }
+    public double getSquareSumY() {
+        return _squareSumY;
+    }
 
     public long getCount() {
         return _count;
@@ -116,19 +120,22 @@ public class CorrelationTuple implements Comparable<CorrelationTuple> {
             } else {
                 double cov1 = _sumXY / _count - (_sumX / _count) * (_sumY / _count);
                 double cov2 =
-                        correlationTuple._sumXY / correlationTuple._count - (correlationTuple._sumX / correlationTuple._count) * (
+                        correlationTuple._sumXY / correlationTuple._count
+                                - (correlationTuple._sumX / correlationTuple._count) * (
                                 correlationTuple._sumY / correlationTuple._count);
 
-                double stdX1 = Math.sqrt(_squareSumX / _count -  _sumX * _sumX / _count / _count);
-                double stdY1 = Math.sqrt(_squareSumY / _count -  _sumY * _sumY / _count / _count);
+                double stdX1 = Math.sqrt(_squareSumX / _count - _sumX * _sumX / _count / _count);
+                double stdY1 = Math.sqrt(_squareSumY / _count - _sumY * _sumY / _count / _count);
 
-                double stdX2 = Math.sqrt(correlationTuple._squareSumX / correlationTuple._count -
-                        correlationTuple._sumX * correlationTuple._sumX / correlationTuple._count / correlationTuple._count);
-                double stdY2 = Math.sqrt(correlationTuple._squareSumY / correlationTuple._count -
-                        correlationTuple._sumY * correlationTuple._sumY / correlationTuple._count / correlationTuple._count);
+                double stdX2 = Math.sqrt(correlationTuple._squareSumX / correlationTuple._count
+                        - correlationTuple._sumX * correlationTuple._sumX / correlationTuple._count
+                        / correlationTuple._count);
+                double stdY2 = Math.sqrt(correlationTuple._squareSumY / correlationTuple._count
+                        - correlationTuple._sumY * correlationTuple._sumY / correlationTuple._count
+                        / correlationTuple._count);
 
-                double corr1 = cov1 /(stdX1 * stdY1);
-                double corr2 = cov2 /(stdX2 * stdY2);
+                double corr1 = cov1 / (stdX1 * stdY1);
+                double corr2 = cov2 / (stdX2 * stdY2);
 
                 return Double.compare(corr1, corr2);
             }
