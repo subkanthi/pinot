@@ -19,6 +19,9 @@
 
 package org.apache.pinot.core.query.aggregation.function;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 import org.apache.pinot.common.request.context.ExpressionContext;
 import org.apache.pinot.common.utils.DataSchema;
 import org.apache.pinot.core.common.BlockValSet;
@@ -29,10 +32,6 @@ import org.apache.pinot.core.query.aggregation.groupby.ObjectGroupByResultHolder
 import org.apache.pinot.core.query.aggregation.utils.StatisticalAggregationFunctionUtils;
 import org.apache.pinot.segment.local.customobject.CorrelationTuple;
 import org.apache.pinot.segment.spi.AggregationFunctionType;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
 
 public class CorrelationAggregationFunction implements AggregationFunction<CorrelationTuple, Double> {
     private static final double DEFAULT_FINAL_RESULT = Double.NEGATIVE_INFINITY;
@@ -190,7 +189,12 @@ public class CorrelationAggregationFunction implements AggregationFunction<Corre
             double squareSumX = correlationTuple.getSquareSumX();
             double squareSumY = correlationTuple.getSquareSumY();
 
-            return (sumXY / count) - (sumX * sumY) / (count * count);
+            double cov1 = sumXY / count - (sumX / count) * (sumY / count);
+
+            double stdX1 = Math.sqrt(squareSumX / count - sumX * sumX / count / count);
+            double stdY1 = Math.sqrt(squareSumY / count - sumY * sumY / count / count);
+
+            return cov1 / (stdX1 * stdY1);
         }
     }
 

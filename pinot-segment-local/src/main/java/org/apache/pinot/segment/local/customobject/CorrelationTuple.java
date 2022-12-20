@@ -19,8 +19,8 @@
 
 package org.apache.pinot.segment.local.customobject;
 
-import javax.annotation.Nonnull;
 import java.nio.ByteBuffer;
+import javax.annotation.Nonnull;
 
 public class CorrelationTuple implements Comparable<CorrelationTuple> {
 
