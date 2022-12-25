@@ -473,12 +473,12 @@ public class AggregationFunctionFactoryTest {
     assertEquals(aggregationFunction.getColumnName(), "kurtosis_column");
     assertEquals(aggregationFunction.getResultColumnName(), "kurtosis(column)");
 
-    function = getFunction("corr");
+    function = getFunction("corr", "(column, 95)");
     aggregationFunction = AggregationFunctionFactory.getAggregationFunction(function, DUMMY_QUERY_CONTEXT);
-    assertTrue(aggregationFunction instanceof BooleanOrAggregationFunction);
-    assertEquals(aggregationFunction.getType(), AggregationFunctionType.BOOLOR);
-    assertEquals(aggregationFunction.getColumnName(), "boolOr_column");
-    assertEquals(aggregationFunction.getResultColumnName(), "boolor(column)");
+    assertTrue(aggregationFunction instanceof CorrelationAggregationFunction);
+    assertEquals(aggregationFunction.getType(), AggregationFunctionType.CORR);
+    assertEquals(aggregationFunction.getColumnName(), "corr_column_'95'");
+    assertEquals(aggregationFunction.getResultColumnName(), "corr(column,'95')");
   }
 
   private FunctionContext getFunction(String functionName) {

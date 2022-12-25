@@ -318,6 +318,22 @@ public class StatisticalQueriesTest extends BaseQueriesTest {
   }
 
   @Test
+  public void testCorrelationAggregationOnly() {
+    String correlationQuery =
+            "SELECT CORR(intColumnX, intColumnY), CORR(doubleColumnX, doubleColumnY), CORR(intColumnX, "
+                    + "doubleColumnX), " + "CORR(intColumnX, longColumn), CORR(intColumnX, floatColumn), "
+                    + "CORR(doubleColumnX, longColumn), CORR(doubleColumnX, floatColumn), CORR(longColumn, "
+                    + "floatColumn)  FROM testTable";
+    AggregationOperator aggregationOperator = getOperator(correlationQuery);
+
+    AggregationResultsBlock resultsBlock = aggregationOperator.nextBlock();
+    QueriesTestUtils.testInnerSegmentExecutionStatistics(aggregationOperator.getExecutionStatistics(), NUM_RECORDS, 0,
+            NUM_RECORDS * 6, NUM_RECORDS);
+    List<Object> aggregationResult = resultsBlock.getResults();
+    assertNotNull(aggregationResult);
+  }
+
+  @Test
   public void testCovarianceAggregationOnly() {
     // Inner Segment
     String query =
