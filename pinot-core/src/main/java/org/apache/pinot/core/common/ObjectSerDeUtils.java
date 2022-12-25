@@ -63,16 +63,7 @@ import org.apache.pinot.common.datatable.DataTable;
 import org.apache.pinot.core.query.distinct.DistinctTable;
 import org.apache.pinot.core.query.utils.idset.IdSet;
 import org.apache.pinot.core.query.utils.idset.IdSets;
-import org.apache.pinot.segment.local.customobject.AvgPair;
-import org.apache.pinot.segment.local.customobject.CovarianceTuple;
-import org.apache.pinot.segment.local.customobject.DoubleLongPair;
-import org.apache.pinot.segment.local.customobject.FloatLongPair;
-import org.apache.pinot.segment.local.customobject.IntLongPair;
-import org.apache.pinot.segment.local.customobject.LongLongPair;
-import org.apache.pinot.segment.local.customobject.MinMaxRangePair;
-import org.apache.pinot.segment.local.customobject.QuantileDigest;
-import org.apache.pinot.segment.local.customobject.StringLongPair;
-import org.apache.pinot.segment.local.customobject.VarianceTuple;
+import org.apache.pinot.segment.local.customobject.*;
 import org.apache.pinot.segment.local.utils.GeometrySerializer;
 import org.apache.pinot.spi.utils.BigDecimalUtils;
 import org.apache.pinot.spi.utils.ByteArray;
@@ -210,6 +201,8 @@ public class ObjectSerDeUtils {
         return ObjectType.CovarianceTuple;
       } else if (value instanceof VarianceTuple) {
         return ObjectType.VarianceTuple;
+      } else if (value instanceof CorrelationTuple) {
+        return ObjectType.CorrelationTuple;
       } else {
         throw new IllegalArgumentException("Unsupported type of value: " + value.getClass().getSimpleName());
       }
@@ -464,6 +457,23 @@ public class ObjectSerDeUtils {
     @Override
     public CovarianceTuple deserialize(ByteBuffer byteBuffer) {
       return CovarianceTuple.fromByteBuffer(byteBuffer);
+    }
+  };
+
+  public static final ObjectSerDe<CorrelationTuple> CORRELATION_TUPLE_OBJECT_SER_DE = new ObjectSerDe<CorrelationTuple>() {
+    @Override
+    public byte[] serialize(CorrelationTuple correlationTuple) {
+      return correlationTuple.toBytes();
+    }
+
+    @Override
+    public CorrelationTuple deserialize(byte[] bytes) {
+      return CorrelationTuple.fromBytes(bytes);
+    }
+
+    @Override
+    public CorrelationTuple deserialize(ByteBuffer byteBuffer) {
+      return CorrelationTuple.fromByteBuffer(byteBuffer);
     }
   };
 
@@ -1214,7 +1224,8 @@ public class ObjectSerDeUtils {
       DOUBLE_LONG_PAIR_SER_DE,
       STRING_LONG_PAIR_SER_DE,
       COVARIANCE_TUPLE_OBJECT_SER_DE,
-      VARIANCE_TUPLE_OBJECT_SER_DE
+      VARIANCE_TUPLE_OBJECT_SER_DE,
+      CORRELATION_TUPLE_OBJECT_SER_DE
   };
   //@formatter:on
 
