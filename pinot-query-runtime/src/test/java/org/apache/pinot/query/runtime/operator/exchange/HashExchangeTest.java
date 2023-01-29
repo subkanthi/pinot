@@ -21,9 +21,9 @@ package org.apache.pinot.query.runtime.operator.exchange;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterators;
 import java.util.Iterator;
+import org.apache.pinot.query.mailbox.JsonMailboxIdentifier;
 import org.apache.pinot.query.mailbox.MailboxIdentifier;
 import org.apache.pinot.query.mailbox.MailboxService;
-import org.apache.pinot.query.mailbox.StringMailboxIdentifier;
 import org.apache.pinot.query.planner.partitioning.KeySelector;
 import org.apache.pinot.query.runtime.blocks.TransferableBlock;
 import org.apache.pinot.query.runtime.blocks.TransferableBlockUtils;
@@ -37,9 +37,8 @@ import org.testng.annotations.Test;
 
 
 public class HashExchangeTest {
-
-  private static final MailboxIdentifier MAILBOX_1 = new StringMailboxIdentifier("1:host:1:host:1");
-  private static final MailboxIdentifier MAILBOX_2 = new StringMailboxIdentifier("1:host:1:host:2");
+  private static final MailboxIdentifier MAILBOX_1 = new JsonMailboxIdentifier("1", "0@host:1", "0@host:1");
+  private static final MailboxIdentifier MAILBOX_2 = new JsonMailboxIdentifier("1", "0@host:1", "0@host:2");
 
   private AutoCloseable _mocks;
 
@@ -89,6 +88,7 @@ public class HashExchangeTest {
   }
 
   private static class TestSelector implements KeySelector<Object[], Object[]> {
+    private static final String HASH_ALGORITHM = "dummyHash";
 
     private final Iterator<Integer> _hashes;
 
@@ -104,6 +104,11 @@ public class HashExchangeTest {
     @Override
     public int computeHash(Object[] input) {
       return _hashes.next();
+    }
+
+    @Override
+    public String hashAlgorithm() {
+      return HASH_ALGORITHM;
     }
   }
 }

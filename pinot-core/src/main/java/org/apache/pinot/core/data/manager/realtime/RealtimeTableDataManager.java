@@ -29,8 +29,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -45,7 +43,6 @@ import org.apache.pinot.common.metadata.instance.InstanceZKMetadata;
 import org.apache.pinot.common.metadata.segment.SegmentZKMetadata;
 import org.apache.pinot.common.metrics.ServerGauge;
 import org.apache.pinot.common.utils.LLCSegmentName;
-import org.apache.pinot.common.utils.NamedThreadFactory;
 import org.apache.pinot.common.utils.SegmentName;
 import org.apache.pinot.common.utils.SegmentUtils;
 import org.apache.pinot.common.utils.TarGzCompressionUtils;
@@ -87,8 +84,6 @@ import static org.apache.pinot.spi.utils.CommonConstants.Segment.METADATA_URI_FO
 
 @ThreadSafe
 public class RealtimeTableDataManager extends BaseTableDataManager {
-  private final ExecutorService _segmentAsyncExecutorService =
-      Executors.newSingleThreadExecutor(new NamedThreadFactory("SegmentAsyncExecutorService"));
   private SegmentBuildTimeLeaseExtender _leaseExtender;
   private RealtimeSegmentStatsHistory _statsHistory;
   private final Semaphore _segmentBuildSemaphore;
@@ -216,7 +211,6 @@ public class RealtimeTableDataManager extends BaseTableDataManager {
 
   @Override
   protected void doShutdown() {
-    _segmentAsyncExecutorService.shutdown();
     if (_tableUpsertMetadataManager != null) {
       try {
         _tableUpsertMetadataManager.close();
@@ -240,8 +234,8 @@ public class RealtimeTableDataManager extends BaseTableDataManager {
    * @param ingestionTimeMs Ingestion delay being reported.
    * @param partitionGroupId Partition ID for which delay is being updated.
    */
-  public void updateIngestionDelay(long ingestionTimeMs, int partitionGroupId) {
-    _ingestionDelayTracker.updateIngestionDelay(ingestionTimeMs, partitionGroupId);
+  public void updateIngestionDelay(long ingestionTimeMs, long firstStreamIngestionTimeMs, int partitionGroupId) {
+    _ingestionDelayTracker.updateIngestionDelay(ingestionTimeMs, firstStreamIngestionTimeMs, partitionGroupId);
   }
 
   /*

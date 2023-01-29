@@ -23,16 +23,16 @@ import org.apache.pinot.spi.trace.Tracing;
 
 
 public class LoopUtils {
-
   private LoopUtils() {
   }
+
   public static final int MAX_ENTRIES_KEYS_MERGED_PER_INTERRUPTION_CHECK_MASK = 0b1_1111_1111_1111;
 
   // Check for thread interruption, every time after merging 8192 keys
   public static void checkMergePhaseInterruption(int mergedKeys) {
     if ((mergedKeys & MAX_ENTRIES_KEYS_MERGED_PER_INTERRUPTION_CHECK_MASK) == 0
-        && (Tracing.ThreadAccountantOps.isInterrupted())) {
-      throw new EarlyTerminationException();
+        && Tracing.ThreadAccountantOps.isInterrupted()) {
+      throw new EarlyTerminationException("Interrupted while merging records");
     }
   }
 }

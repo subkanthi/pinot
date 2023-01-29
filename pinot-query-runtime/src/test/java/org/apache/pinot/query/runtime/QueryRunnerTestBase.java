@@ -47,6 +47,8 @@ import org.apache.pinot.query.QueryTestSet;
 import org.apache.pinot.query.mailbox.GrpcMailboxService;
 import org.apache.pinot.query.planner.QueryPlan;
 import org.apache.pinot.query.planner.stage.MailboxReceiveNode;
+import org.apache.pinot.query.routing.VirtualServer;
+import org.apache.pinot.query.routing.VirtualServerAddress;
 import org.apache.pinot.query.runtime.operator.MailboxReceiveOperator;
 import org.apache.pinot.query.runtime.plan.DistributedStagePlan;
 import org.apache.pinot.query.service.QueryConfig;
@@ -92,13 +94,13 @@ public abstract class QueryRunnerTestBase extends QueryTestSet {
         mailboxReceiveOperator = QueryDispatcher.createReduceStageOperator(_mailboxService,
             queryPlan.getStageMetadataMap().get(reduceNode.getSenderStageId()).getServerInstances(),
             Long.parseLong(requestMetadataMap.get(QueryConfig.KEY_OF_BROKER_REQUEST_ID)), reduceNode.getSenderStageId(),
-            reduceNode.getDataSchema(), "localhost", _reducerGrpcPort,
+            reduceNode.getDataSchema(), new VirtualServerAddress("localhost", _reducerGrpcPort, 0),
             Long.parseLong(requestMetadataMap.get(QueryConfig.KEY_OF_BROKER_REQUEST_TIMEOUT_MS)));
       } else {
-        for (ServerInstance serverInstance : queryPlan.getStageMetadataMap().get(stageId).getServerInstances()) {
+        for (VirtualServer serverInstance : queryPlan.getStageMetadataMap().get(stageId).getServerInstances()) {
           DistributedStagePlan distributedStagePlan =
               QueryDispatcher.constructDistributedStagePlan(queryPlan, stageId, serverInstance);
-          _servers.get(serverInstance).processQuery(distributedStagePlan, requestMetadataMap);
+          _servers.get(serverInstance.getServer()).processQuery(distributedStagePlan, requestMetadataMap);
         }
       }
     }
@@ -110,6 +112,11 @@ public abstract class QueryRunnerTestBase extends QueryTestSet {
 
   protected List<Object[]> queryH2(String sql)
       throws Exception {
+    int firstSemi = sql.indexOf(';');
+    if (firstSemi > 0 && firstSemi != sql.length() - 1) {
+      // trim off any SET statements for H2
+      sql = sql.substring(firstSemi + 1);
+    }
     Statement h2statement = _h2Connection.createStatement(ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY);
     h2statement.execute(sql);
     ResultSet h2ResultSet = h2statement.getResultSet();
