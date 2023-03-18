@@ -138,7 +138,6 @@ public class CorrelationTuple implements Comparable<CorrelationTuple> {
                 double corr2 = cov2 / (stdX2 * stdY2);
 
                 return Double.compare(corr1, corr2);
-
             }
         }
     }

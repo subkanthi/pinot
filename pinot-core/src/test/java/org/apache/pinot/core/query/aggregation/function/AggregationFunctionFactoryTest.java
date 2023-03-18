@@ -411,19 +411,14 @@ public class AggregationFunctionFactoryTest {
     aggregationFunction = AggregationFunctionFactory.getAggregationFunction(function, DUMMY_QUERY_CONTEXT);
     assertTrue(aggregationFunction instanceof FourthMomentAggregationFunction);
     assertEquals(aggregationFunction.getType(), AggregationFunctionType.KURTOSIS);
-<<<<<<< HEAD
-    assertEquals(aggregationFunction.getColumnName(), "kurtosis_column");
     assertEquals(aggregationFunction.getResultColumnName(), "kurtosis(column)");
 
     function = getFunction("corr", "(column, 95)");
     aggregationFunction = AggregationFunctionFactory.getAggregationFunction(function, DUMMY_QUERY_CONTEXT);
     assertTrue(aggregationFunction instanceof CorrelationAggregationFunction);
     assertEquals(aggregationFunction.getType(), AggregationFunctionType.CORR);
-    assertEquals(aggregationFunction.getColumnName(), "corr_column_'95'");
     assertEquals(aggregationFunction.getResultColumnName(), "corr(column,'95')");
-=======
     assertEquals(aggregationFunction.getResultColumnName(), function.toString());
->>>>>>> 5673c8e6b2fe771384ba7a490346802dbe98c618
   }
 
   private FunctionContext getFunction(String functionName) {

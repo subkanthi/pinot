@@ -51,11 +51,6 @@ public class CorrelationAggregationFunction implements AggregationFunction<Corre
     }
 
     @Override
-    public String getColumnName() {
-        return getType().getName() + "_" + _expression1 + "_" + _expression2;
-    }
-
-    @Override
     public String getResultColumnName() {
         return getType().getName().toLowerCase() + "(" + _expression1 + "," + _expression2 + ")";
     }
