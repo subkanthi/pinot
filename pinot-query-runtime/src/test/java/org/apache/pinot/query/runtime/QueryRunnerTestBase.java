@@ -40,6 +40,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.stream.Collectors;
+import org.apache.pinot.common.response.broker.ResultTable;
 import org.apache.pinot.core.query.reduce.ExecutionStatsAggregator;
 import org.apache.pinot.core.transport.ServerInstance;
 import org.apache.pinot.query.QueryEnvironment;
@@ -49,11 +50,9 @@ import org.apache.pinot.query.mailbox.GrpcMailboxService;
 import org.apache.pinot.query.planner.QueryPlan;
 import org.apache.pinot.query.planner.stage.MailboxReceiveNode;
 import org.apache.pinot.query.routing.VirtualServer;
-import org.apache.pinot.query.routing.VirtualServerAddress;
-import org.apache.pinot.query.runtime.operator.MailboxReceiveOperator;
 import org.apache.pinot.query.runtime.plan.DistributedStagePlan;
 import org.apache.pinot.query.service.QueryConfig;
-import org.apache.pinot.query.service.QueryDispatcher;
+import org.apache.pinot.query.service.dispatch.QueryDispatcher;
 import org.apache.pinot.spi.data.FieldSpec;
 import org.apache.pinot.spi.data.Schema;
 import org.apache.pinot.spi.data.readers.GenericRow;
@@ -82,22 +81,17 @@ public abstract class QueryRunnerTestBase extends QueryTestSet {
   // --------------------------------------------------------------------------
   // QUERY UTILS
   // --------------------------------------------------------------------------
-  protected List<Object[]> queryRunner(String sql, ExecutionStatsAggregator executionStatsAggregator) {
+  protected List<Object[]> queryRunner(String sql, Map<Integer, ExecutionStatsAggregator> executionStatsAggregatorMap) {
     QueryPlan queryPlan = _queryEnvironment.planQuery(sql);
+    long requestId = RANDOM_REQUEST_ID_GEN.nextLong();
     Map<String, String> requestMetadataMap =
-        ImmutableMap.of(QueryConfig.KEY_OF_BROKER_REQUEST_ID, String.valueOf(RANDOM_REQUEST_ID_GEN.nextLong()),
+        ImmutableMap.of(QueryConfig.KEY_OF_BROKER_REQUEST_ID, String.valueOf(requestId),
             QueryConfig.KEY_OF_BROKER_REQUEST_TIMEOUT_MS,
             String.valueOf(CommonConstants.Broker.DEFAULT_BROKER_TIMEOUT_MS));
-    MailboxReceiveOperator mailboxReceiveOperator = null;
+    int reducerStageId = -1;
     for (int stageId : queryPlan.getStageMetadataMap().keySet()) {
       if (queryPlan.getQueryStageMap().get(stageId) instanceof MailboxReceiveNode) {
-        MailboxReceiveNode reduceNode = (MailboxReceiveNode) queryPlan.getQueryStageMap().get(stageId);
-        mailboxReceiveOperator = QueryDispatcher.createReduceStageOperator(_mailboxService,
-            queryPlan.getStageMetadataMap().get(reduceNode.getSenderStageId()).getServerInstances(),
-            Long.parseLong(requestMetadataMap.get(QueryConfig.KEY_OF_BROKER_REQUEST_ID)), reduceNode.getSenderStageId(),
-            reduceNode.getStageId(), reduceNode.getDataSchema(),
-            new VirtualServerAddress("localhost", _reducerGrpcPort, 0),
-            Long.parseLong(requestMetadataMap.get(QueryConfig.KEY_OF_BROKER_REQUEST_TIMEOUT_MS)));
+        reducerStageId = stageId;
       } else {
         for (VirtualServer serverInstance : queryPlan.getStageMetadataMap().get(stageId).getServerInstances()) {
           DistributedStagePlan distributedStagePlan =
@@ -105,12 +99,15 @@ public abstract class QueryRunnerTestBase extends QueryTestSet {
           _servers.get(serverInstance.getServer()).processQuery(distributedStagePlan, requestMetadataMap);
         }
       }
+      if (executionStatsAggregatorMap != null) {
+        executionStatsAggregatorMap.put(stageId, new ExecutionStatsAggregator(true));
+      }
     }
-    Preconditions.checkNotNull(mailboxReceiveOperator);
-    return QueryDispatcher.toResultTable(
-        QueryDispatcher.reduceMailboxReceive(mailboxReceiveOperator, CommonConstants.Broker.DEFAULT_BROKER_TIMEOUT_MS,
-            executionStatsAggregator),
-        queryPlan.getQueryResultFields(), queryPlan.getQueryStageMap().get(0).getDataSchema()).getRows();
+    Preconditions.checkState(reducerStageId != -1);
+    ResultTable resultTable = QueryDispatcher.runReducer(requestId, queryPlan, reducerStageId,
+        Long.parseLong(requestMetadataMap.get(QueryConfig.KEY_OF_BROKER_REQUEST_TIMEOUT_MS)), _mailboxService,
+        executionStatsAggregatorMap);
+    return resultTable.getRows();
   }
 
   protected List<Object[]> queryH2(String sql)
@@ -136,6 +133,11 @@ public abstract class QueryRunnerTestBase extends QueryTestSet {
   }
 
   protected void compareRowEquals(List<Object[]> resultRows, List<Object[]> expectedRows) {
+    compareRowEquals(resultRows, expectedRows, false);
+  }
+
+  protected void compareRowEquals(List<Object[]> resultRows, List<Object[]> expectedRows,
+      boolean keepOutputRowsInOrder) {
     Assert.assertEquals(resultRows.size(), expectedRows.size(),
         String.format("Mismatched number of results. expected: %s, actual: %s",
             expectedRows.stream().map(Arrays::toString).collect(Collectors.joining(",\n")),
@@ -191,8 +193,10 @@ public abstract class QueryRunnerTestBase extends QueryTestSet {
       }
       return 0;
     };
-    resultRows.sort(rowComp);
-    expectedRows.sort(rowComp);
+    if (!keepOutputRowsInOrder) {
+      resultRows.sort(rowComp);
+      expectedRows.sort(rowComp);
+    }
     for (int i = 0; i < resultRows.size(); i++) {
       Object[] resultRow = resultRows.get(i);
       Object[] expectedRow = expectedRows.get(i);
@@ -364,6 +368,8 @@ public abstract class QueryRunnerTestBase extends QueryTestSet {
       public List<List<Object>> _outputs = null;
       @JsonProperty("expectedException")
       public String _expectedException;
+      @JsonProperty("keepOutputRowOrder")
+      public boolean _keepOutputRowOrder;
     }
 
     public static class ColumnAndType {

@@ -22,8 +22,10 @@ import com.google.common.base.Stopwatch;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
+import org.apache.pinot.common.datatable.DataTable;
 import org.apache.pinot.query.routing.VirtualServerAddress;
 import org.apache.pinot.query.runtime.operator.utils.OperatorUtils;
+import org.apache.pinot.query.runtime.plan.OpChainExecutionContext;
 
 
 public class OperatorStats {
@@ -38,8 +40,14 @@ public class OperatorStats {
 
   private int _numBlock = 0;
   private int _numRows = 0;
-  private Map<String, String> _executionStats;
+  private long _startTimeMs = -1;
+  private final Map<String, String> _executionStats;
 
+  public OperatorStats(OpChainExecutionContext context, String operatorType) {
+    this(context.getRequestId(), context.getStageId(), context.getServer(), operatorType);
+  }
+
+  //TODO: remove this constructor after the context constructor can be used in serialization and deserialization
   public OperatorStats(long requestId, int stageId, VirtualServerAddress serverAddress, String operatorType) {
     _stageId = stageId;
     _requestId = requestId;
@@ -49,6 +57,7 @@ public class OperatorStats {
   }
 
   public void startTimer() {
+    _startTimeMs = _startTimeMs == -1 ? System.currentTimeMillis() : _startTimeMs;
     if (!_executeStopwatch.isRunning()) {
       _executeStopwatch.start();
     }
@@ -65,15 +74,24 @@ public class OperatorStats {
     _numRows += numRows;
   }
 
+  public void recordSingleStat(String key, String stat) {
+    _executionStats.put(key, stat);
+  }
+
   public void recordExecutionStats(Map<String, String> executionStats) {
-    _executionStats = executionStats;
+    _executionStats.putAll(executionStats);
   }
 
   public Map<String, String> getExecutionStats() {
-    _executionStats.put(OperatorUtils.NUM_BLOCKS, String.valueOf(_numBlock));
-    _executionStats.put(OperatorUtils.NUM_ROWS, String.valueOf(_numRows));
-    _executionStats.put(OperatorUtils.THREAD_EXECUTION_TIME,
+    _executionStats.putIfAbsent(DataTable.MetadataKey.NUM_BLOCKS.getName(), String.valueOf(_numBlock));
+    _executionStats.putIfAbsent(DataTable.MetadataKey.NUM_ROWS.getName(), String.valueOf(_numRows));
+    _executionStats.putIfAbsent(DataTable.MetadataKey.OPERATOR_EXECUTION_TIME_MS.getName(),
         String.valueOf(_executeStopwatch.elapsed(TimeUnit.MILLISECONDS)));
+    // wall time are recorded slightly longer than actual execution but it is OK.
+    _executionStats.putIfAbsent(DataTable.MetadataKey.OPERATOR_EXEC_START_TIME_MS.getName(),
+        String.valueOf(_startTimeMs));
+    _executionStats.putIfAbsent(DataTable.MetadataKey.OPERATOR_EXEC_END_TIME_MS.getName(),
+        String.valueOf(System.currentTimeMillis()));
     return _executionStats;
   }
 
