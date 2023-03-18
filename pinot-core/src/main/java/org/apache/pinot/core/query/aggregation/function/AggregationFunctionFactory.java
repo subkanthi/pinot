@@ -281,6 +281,8 @@ public class AggregationFunctionFactory {
             return new CovarianceAggregationFunction(arguments, false);
           case COVARSAMP:
             return new CovarianceAggregationFunction(arguments, true);
+          case CORR:
+            return new CorrelationAggregationFunction(arguments, false);
           case BOOLAND:
             return new BooleanAndAggregationFunction(firstArgument, queryContext.isNullHandlingEnabled());
           case BOOLOR:

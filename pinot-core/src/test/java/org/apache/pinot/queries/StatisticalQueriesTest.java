@@ -28,6 +28,7 @@ import java.util.List;
 import java.util.Random;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.math3.stat.correlation.Covariance;
+import org.apache.commons.math3.stat.correlation.PearsonsCorrelation;
 import org.apache.commons.math3.stat.descriptive.moment.Kurtosis;
 import org.apache.commons.math3.stat.descriptive.moment.Skewness;
 import org.apache.commons.math3.stat.descriptive.moment.StandardDeviation;
@@ -40,6 +41,7 @@ import org.apache.pinot.core.operator.blocks.results.GroupByResultsBlock;
 import org.apache.pinot.core.operator.query.AggregationOperator;
 import org.apache.pinot.core.operator.query.GroupByOperator;
 import org.apache.pinot.core.query.aggregation.groupby.AggregationGroupByResult;
+import org.apache.pinot.segment.local.customobject.CorrelationTuple;
 import org.apache.pinot.segment.local.customobject.CovarianceTuple;
 import org.apache.pinot.segment.local.customobject.PinotFourthMoment;
 import org.apache.pinot.segment.local.customobject.VarianceTuple;
@@ -111,16 +113,23 @@ public class StatisticalQueriesTest extends BaseQueriesTest {
   private int _sumIntY = 0;
   private int _sumIntXY = 0;
 
+  private int _squareSumIntX = 0;
+  private int _squareSumIntY = 0;
   private double _sumDoubleX = 0;
   private double _sumDoubleY = 0;
   private double _sumDoubleXY = 0;
+
+  private double _squareSumDoubleX = 0;
+  private double _squareSumDoubleY = 0;
 
   private long _sumLong = 0L;
   private double _sumFloat = 0;
 
   private double _sumIntDouble = 0;
   private long _sumIntLong = 0L;
+  private long _squareSumLong = 0L;
   private double _sumIntFloat = 0;
+  private double _squareSumFloat = 0;
   private double _sumDoubleLong = 0;
   private double _sumDoubleFloat = 0;
   private double _sumLongFloat = 0;
@@ -197,6 +206,12 @@ public class StatisticalQueriesTest extends BaseQueriesTest {
     double sumXGroupBy = 0;
     int groupByVal = 0;
 
+    double squareSumX = 0;
+    double squareSumY = 0;
+
+    double squareSumIntX = 0;
+    double squareSumIntY = 0;
+
     for (int i = 0; i < NUM_RECORDS; i++) {
       GenericRow record = new GenericRow();
       int intX = _intColX[i];
@@ -224,21 +239,33 @@ public class StatisticalQueriesTest extends BaseQueriesTest {
       sumXY += doubleX * doubleY;
       sumXGroupBy += doubleX * groupByVal;
 
+      squareSumX = doubleX * doubleX;
+      squareSumY = doubleY * doubleY;
+
+      squareSumIntX = intX * intX;
+      squareSumIntY = intY * intY;
+
       _floatCol[i] = floatVal;
       _groupByCol[i] = groupByVal;
 
       // calculate inner segment results
       _sumIntX += intX;
       _sumIntY += intY;
+      _squareSumIntX += intX * intX;
+      _squareSumIntY += intY * intY;
       _sumDoubleX += doubleX;
       _sumDoubleY += doubleY;
       _sumLong += longVal;
       _sumFloat += floatVal;
       _sumIntXY += intX * intY;
       _sumDoubleXY += doubleX * doubleY;
+      _squareSumDoubleX += doubleX * doubleX;
+      _squareSumDoubleY += doubleY * doubleY;
       _sumIntDouble += intX * doubleX;
       _sumIntLong += intX * longVal;
+      _squareSumLong += longVal * longVal;
       _sumIntFloat += intX * _floatCol[i];
+      _squareSumFloat += _floatCol[i] * _floatCol[i];
       _sumDoubleLong += doubleX * longVal;
       _sumDoubleFloat += doubleX * _floatCol[i];
       _sumLongFloat += longVal * _floatCol[i];
@@ -315,6 +342,51 @@ public class StatisticalQueriesTest extends BaseQueriesTest {
     driver.build();
 
     return ImmutableSegmentLoader.load(new File(INDEX_DIR, segmentName), ReadMode.mmap);
+  }
+
+  @Test
+  public void testCorrelationAggregationOnly() {
+    String correlationQuery =
+            "SELECT CORR(intColumnX, intColumnY), CORR(doubleColumnX, doubleColumnY), CORR(intColumnX, "
+                    + "doubleColumnX), " + "CORR(intColumnX, longColumn), CORR(intColumnX, floatColumn), "
+                    + "CORR(doubleColumnX, longColumn), CORR(doubleColumnX, floatColumn), CORR(longColumn, "
+                    + "floatColumn)  FROM testTable";
+    AggregationOperator aggregationOperator = getOperator(correlationQuery);
+
+    AggregationResultsBlock resultsBlock = aggregationOperator.nextBlock();
+    QueriesTestUtils.testInnerSegmentExecutionStatistics(aggregationOperator.getExecutionStatistics(), NUM_RECORDS, 0,
+            NUM_RECORDS * 6, NUM_RECORDS);
+    List<Object> aggregationResult = resultsBlock.getResults();
+    assertNotNull(aggregationResult);
+
+    checkWithPrecisionForCorrelation((CorrelationTuple) aggregationResult.get(0), _sumIntX, _sumIntY, _sumIntXY,
+            _squareSumIntX, _squareSumIntY, NUM_RECORDS);
+    checkWithPrecisionForCorrelation((CorrelationTuple) aggregationResult.get(1), _sumDoubleX, _sumDoubleY,
+            _sumDoubleXY, _squareSumDoubleX, _squareSumDoubleY, NUM_RECORDS);
+    checkWithPrecisionForCorrelation((CorrelationTuple) aggregationResult.get(2), _sumIntX, _sumDoubleX, _sumIntDouble,
+            _squareSumIntX, _squareSumDoubleX, NUM_RECORDS);
+    checkWithPrecisionForCorrelation((CorrelationTuple) aggregationResult.get(3), _sumIntX, _sumLong, _sumIntLong,
+            _squareSumIntX, _squareSumLong, NUM_RECORDS);
+    checkWithPrecisionForCorrelation((CorrelationTuple) aggregationResult.get(4), _sumIntX, _sumFloat, _sumIntFloat,
+            _squareSumIntX, _squareSumFloat, NUM_RECORDS);
+    checkWithPrecisionForCorrelation((CorrelationTuple) aggregationResult.get(5), _sumDoubleX, _sumLong,
+            _sumDoubleLong, _squareSumDoubleX, _squareSumLong, NUM_RECORDS);
+    checkWithPrecisionForCorrelation((CorrelationTuple) aggregationResult.get(6), _sumDoubleX, _sumFloat,
+            _sumDoubleFloat, _squareSumDoubleX, _squareSumFloat, NUM_RECORDS);
+    checkWithPrecisionForCorrelation((CorrelationTuple) aggregationResult.get(7), _sumLong, _sumFloat, _sumLongFloat,
+            _squareSumLong, _squareSumFloat, NUM_RECORDS);
+
+    double expectedCorrDoubleXY = new PearsonsCorrelation().correlation(_doubleColX, _doubleColY);
+
+    // Inter segments with 4 identical segments (2 instances each having 2 identical segments)
+    _useIdenticalSegment = true;
+    BrokerResponseNative brokerResponse = getBrokerResponse(correlationQuery);
+    _useIdenticalSegment = false;
+    assertEquals(brokerResponse.getNumDocsScanned(), 4 * NUM_RECORDS);
+    assertEquals(brokerResponse.getNumEntriesScannedInFilter(), 0);
+    assertEquals(brokerResponse.getNumEntriesScannedPostFilter(), 4 * 6 * NUM_RECORDS);
+    assertEquals(brokerResponse.getTotalDocs(), 4 * NUM_RECORDS);
+    checkResultTableWithPrecisionForCovariance(brokerResponse);
   }
 
   @Test
@@ -872,6 +944,17 @@ public class StatisticalQueriesTest extends BaseQueriesTest {
       PinotFourthMoment actual = (PinotFourthMoment) aggregationGroupByResult.getResultForGroupId(0, i);
       checkWithPrecisionForKurt(actual, NUM_RECORDS / NUM_GROUPS, expectedGroupByResult[i].getResult());
     }
+  }
+
+  private void checkWithPrecisionForCorrelation(CorrelationTuple tuple, double sumX, double sumY, double sumXY,
+                                                double squareSumX, double squareSumY, int count) {
+    assertEquals(tuple.getCount(), count);
+    assertTrue(Precision.equalsWithRelativeTolerance(tuple.getSumX(), sumX, RELATIVE_EPSILON));
+    assertTrue(Precision.equalsWithRelativeTolerance(tuple.getSumY(), sumY, RELATIVE_EPSILON));
+    assertTrue(Precision.equalsWithRelativeTolerance(tuple.getSumXY(), sumXY, RELATIVE_EPSILON));
+
+    assertTrue(Precision.equalsWithRelativeTolerance(tuple.getSquareSumX(), squareSumX, RELATIVE_EPSILON));
+    assertTrue(Precision.equalsWithRelativeTolerance(tuple.getSquareSumY(), squareSumY, RELATIVE_EPSILON));
   }
 
   private void checkWithPrecisionForCovariance(CovarianceTuple tuple, double sumX, double sumY, double sumXY,

@@ -61,6 +61,7 @@ public enum AggregationFunctionType {
   HISTOGRAM("histogram"),
   COVARPOP("covarPop"),
   COVARSAMP("covarSamp"),
+  CORR("corr"),
   VARPOP("varPop"),
   VARSAMP("varSamp"),
   STDDEVPOP("stdDevPop"),

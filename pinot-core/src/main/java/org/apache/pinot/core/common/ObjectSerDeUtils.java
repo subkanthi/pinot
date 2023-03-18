@@ -64,6 +64,7 @@ import org.apache.pinot.core.query.distinct.DistinctTable;
 import org.apache.pinot.core.query.utils.idset.IdSet;
 import org.apache.pinot.core.query.utils.idset.IdSets;
 import org.apache.pinot.segment.local.customobject.AvgPair;
+import org.apache.pinot.segment.local.customobject.CorrelationTuple;
 import org.apache.pinot.segment.local.customobject.CovarianceTuple;
 import org.apache.pinot.segment.local.customobject.DoubleLongPair;
 import org.apache.pinot.segment.local.customobject.FloatLongPair;
@@ -127,7 +128,8 @@ public class ObjectSerDeUtils {
     StringLongPair(31),
     CovarianceTuple(32),
     VarianceTuple(33),
-    PinotFourthMoment(34);
+    PinotFourthMoment(34),
+    CorrelationTuple(35);
 
     private final int _value;
 
@@ -213,6 +215,8 @@ public class ObjectSerDeUtils {
         return ObjectType.VarianceTuple;
       } else if (value instanceof PinotFourthMoment) {
         return ObjectType.PinotFourthMoment;
+      } else if (value instanceof CorrelationTuple) {
+        return ObjectType.CorrelationTuple;
       } else {
         throw new IllegalArgumentException("Unsupported type of value: " + value.getClass().getSimpleName());
       }
@@ -502,6 +506,24 @@ public class ObjectSerDeUtils {
     @Override
     public PinotFourthMoment deserialize(ByteBuffer byteBuffer) {
       return PinotFourthMoment.fromBytes(byteBuffer);
+    }
+  };
+
+  public static final ObjectSerDe<CorrelationTuple> CORRELATION_TUPLE_OBJECT_SER_DE
+          = new ObjectSerDe<CorrelationTuple>() {
+    @Override
+    public byte[] serialize(CorrelationTuple value) {
+      return value.toBytes();
+    }
+
+    @Override
+    public CorrelationTuple deserialize(byte[] bytes) {
+      return CorrelationTuple.fromBytes(bytes);
+    }
+
+    @Override
+    public CorrelationTuple deserialize(ByteBuffer byteBuffer) {
+      return CorrelationTuple.fromBytes(byteBuffer.array());
     }
   };
 
@@ -1236,7 +1258,8 @@ public class ObjectSerDeUtils {
       STRING_LONG_PAIR_SER_DE,
       COVARIANCE_TUPLE_OBJECT_SER_DE,
       VARIANCE_TUPLE_OBJECT_SER_DE,
-      PINOT_FOURTH_MOMENT_OBJECT_SER_DE
+      PINOT_FOURTH_MOMENT_OBJECT_SER_DE,
+      CORRELATION_TUPLE_OBJECT_SER_DE
   };
   //@formatter:on
 
